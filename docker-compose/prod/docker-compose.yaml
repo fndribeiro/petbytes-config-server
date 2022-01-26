@@ -66,5 +66,28 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+
+  gatewayserver:
+    image: fephs/gatewayserver:latest
+    mem_limit: 700m
+    ports:
+      - "8092:8092"
+    networks:
+      - petbytes
+    depends_on:
+      - configserver
+      - eurekaserver
+      - ongs
+      - adotantes
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 45s
+        max_attempts: 3
+        window: 180s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
 networks:
   petbytes:
