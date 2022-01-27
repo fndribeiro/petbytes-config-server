@@ -1,6 +1,14 @@
 version: "3.8"
 
 services: 
+  
+  zipkin:
+    image: openzipkin/zipkin
+    mem_limit: 700m
+    ports:
+      - "9411:9411"
+    networks:
+      - petbytes
   configserver:
     image: fephs/configserver:latest
     mem_limit: 700m
@@ -8,6 +16,10 @@ services:
       - "8090:8090"
     networks:
       - petbytes
+    depends_on:
+      - zipkin
+    environment:
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
   eurekaserver:
     image: fephs/eurekaserver:latest
     mem_limit: 700m
@@ -26,6 +38,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: default
       SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
   ongs:
     image: fephs/ongs:latest
     mem_limit: 700m
@@ -46,6 +59,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
   adotantes:
     image: fephs/adotantes:latest
     mem_limit: 700m
@@ -66,6 +80,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
 
   gatewayserver:
     image: fephs/gatewayserver:latest
@@ -89,5 +104,6 @@ services:
       SPRING_PROFILES_ACTIVE: default
       SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
 networks:
   petbytes:
