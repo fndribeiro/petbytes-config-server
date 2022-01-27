@@ -1,0 +1,135 @@
+version: "3.8"
+
+services: 
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - petbytes
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    networks:
+      - petbytes
+    depends_on:
+      - prometheus
+
+  zipkin:
+    image: openzipkin/zipkin
+    mem_limit: 700m
+    ports:
+      - "9411:9411"
+    networks:
+      - petbytes
+
+  configserver:
+    image: fephs/configserver:latest
+    mem_limit: 700m
+    ports:
+      - "8090:8090"
+    networks:
+      - petbytes
+    depends_on:
+      - zipkin
+    environment:
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
+
+  eurekaserver:
+    image: fephs/eurekaserver:latest
+    mem_limit: 700m
+    ports:
+      - "8091:8091"
+    networks:
+      - petbytes
+    depends_on:
+      - configserver
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
+
+  ongs:
+    image: fephs/ongs:latest
+    mem_limit: 700m
+    ports:
+      - "8080:8080"
+    networks:
+      - petbytes
+    depends_on:
+      - configserver
+      - eurekaserver
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
+
+  adotantes:
+    image: fephs/adotantes:latest
+    mem_limit: 700m
+    ports:
+      - "8081:8081"
+    networks:
+      - petbytes
+    depends_on:
+      - configserver
+      - eurekaserver
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
+
+  gatewayserver:
+    image: fephs/gatewayserver:latest
+    mem_limit: 700m
+    ports:
+      - "8092:8092"
+    networks:
+      - petbytes
+    depends_on:
+      - configserver
+      - eurekaserver
+      - ongs
+      - adotantes
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 45s
+        max_attempts: 3
+        window: 180s
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: configserver:http://configserver:8090
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8091/eureka/
+      SPRING_ZIPKIN_BASEURL: http://zipkin:9411/
+
+networks:
+  petbytes:

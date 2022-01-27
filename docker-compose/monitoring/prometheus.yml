@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'ongs'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['ongs:8080']
+  - job_name: 'adotantes'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['adotantes:8081']
